@@ -4,6 +4,7 @@ require 'forwardable'
 require 'active_record'
 require 'apartment/tenant'
 require 'apartment/deprecation'
+require 'parallel'
 
 module Apartment
 
@@ -11,8 +12,8 @@ module Apartment
 
     extend Forwardable
 
-    ACCESSOR_METHODS  = [:use_schemas, :use_sql, :seed_after_create, :prepend_environment, :append_environment, :with_multi_server_setup ]
-    WRITER_METHODS    = [:tenant_names, :database_schema_file, :excluded_models, :default_schema, :persistent_schemas, :connection_class, :tld_length, :db_migrate_tenants, :seed_data_file]
+    ACCESSOR_METHODS  = [:use_schemas, :use_sql, :seed_after_create, :prepend_environment, :append_environment, :with_multi_server_setup, :use_parallel_tenant_task ]
+    WRITER_METHODS    = [:tenant_names, :database_schema_file, :excluded_models, :default_schema, :persistent_schemas, :connection_class, :tld_length, :db_migrate_tenants, :seed_data_file, :num_parallel_in_processes]
 
     attr_accessor(*ACCESSOR_METHODS)
     attr_writer(*WRITER_METHODS)
@@ -102,6 +103,12 @@ module Apartment
     def use_postgres_schemas=(to_use_or_not_to_use)
       Apartment::Deprecation.warn "[Deprecation Warning] `use_postgresql_schemas=` is now deprecated, please use `use_schemas=`"
       self.use_schemas = to_use_or_not_to_use
+    end
+
+    def num_parallel_in_processes
+      return @num_parallel_in_processes if defined?(@num_parallel_in_processes)
+
+      @num_parallel_in_processes = [1,ActiveRecord::Base.connection_pool.size - 2].max
     end
 
     def extract_tenant_config
