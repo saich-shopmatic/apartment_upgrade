@@ -5,15 +5,38 @@ require 'active_record'
 require 'apartment/tenant'
 require 'apartment/deprecation'
 require 'parallel'
+require 'apartment/model_extension'
+require 'apartment/migrations'
+require 'tsort'
+require 'apartment/activerecord_multi_tenant_patch'
 
 module Apartment
+  class ForeignKeyDependency
+    include TSort
+  
+    def initialize
+      @requirements = Hash.new{|h,k| h[k] = []}
+    end
+  
+    def add_requirement(name, *requirement_dependencies)
+      @requirements[name] = requirement_dependencies
+    end
+  
+    def tsort_each_node(&block)
+      @requirements.each_key(&block)
+    end
+  
+    def tsort_each_child(name, &block)
+      @requirements[name].each(&block) if @requirements.has_key?(name)
+    end  
+  end
 
   class << self
 
     extend Forwardable
 
-    ACCESSOR_METHODS  = [:use_schemas, :use_sql, :seed_after_create, :prepend_environment, :append_environment, :with_multi_server_setup, :use_parallel_tenant_task ]
-    WRITER_METHODS    = [:tenant_names, :database_schema_file, :excluded_models, :default_schema, :persistent_schemas, :connection_class, :tld_length, :db_migrate_tenants, :seed_data_file, :num_parallel_in_processes]
+    ACCESSOR_METHODS  = [:use_schemas, :use_sql, :seed_after_create, :prepend_environment, :append_environment, :with_multi_server_setup, :use_parallel_tenant_task, :use_citus, :citus_default_tenant ]
+    WRITER_METHODS    = [:tenant_names, :database_schema_file, :excluded_models, :default_schema, :persistent_schemas, :connection_class, :tld_length, :db_migrate_tenants, :seed_data_file, :num_parallel_in_processes, :multi_tenant_models, :partition_model, :compute_tenant_id_method, :compute_tenant_name_method, :citus_partition_field]
 
     attr_accessor(*ACCESSOR_METHODS)
     attr_writer(*WRITER_METHODS)
@@ -109,6 +132,88 @@ module Apartment
       return @num_parallel_in_processes if defined?(@num_parallel_in_processes)
 
       @num_parallel_in_processes = [1,ActiveRecord::Base.connection_pool.size - 2].max
+    end
+
+    def multi_tenant_models
+      @multi_tenant_models ||= []
+    end
+
+    def multi_tenant_model_classes
+      @multi_tenant_model_classes ||= self.multi_tenant_models.map(&:constantize)
+    end
+
+    def multi_tenant_table_names
+      @multi_tenant_table_names ||= self.multi_tenant_model_classes.map(&:table_name)
+    end
+
+    def multi_tenant_table_name_to_class(table_name)
+      if @multi_tenant_table_name_to_class_map.nil?
+        @multi_tenant_table_name_to_class_map = {}
+        self.multi_tenant_model_classes.each do |klass|
+          @multi_tenant_table_name_to_class_map[klass.table_name] = klass
+        end
+      end
+      @multi_tenant_table_name_to_class_map[table_name]
+    end
+
+    def partition_model
+      raise RuntimeError, "No partition_model defined" unless @partition_model
+      @partition_model
+    end
+
+    def partition_class
+      @partition_class ||= self.partition_model.constantize
+    end
+
+    def compute_tenant_id_method
+      @compute_tenant_id_method ||= proc do |tenant_name|
+        if tenant_name.nil? || tenant_name == "public"
+          0
+        else
+          tenant_name.to_i
+        end
+      end
+    end
+
+    def compute_tenant_name_method
+      @compute_tenant_name_method ||= proc do |tenant_id|
+        if tenant_id.nil? || tenant_id == 0
+          "public"
+        else
+          tenant_id.to_s
+        end
+      end
+    end
+
+    def record_foreign_key_dependency(from_table, to_table)
+      @fk_dependency = ForeignKeyDependency.new if @fk_dependency.nil?
+      @fk_dependency.add_requirement(from_table, to_table)
+    end
+
+    def foreign_key_tsort
+      return [] if @fk_dependency.nil?
+      @fk_dependency.tsort
+    end
+
+    # Meaningful for non-partition model
+    def citus_partition_field
+      @citus_partition_field ||= "#{self.partition_model.underscore}_id".to_sym
+    end
+
+    def sanity_check
+      registered = registered_multi_tenant_model.map(&:to_s).sort
+      expected = multi_tenant_models.sort
+      puts "Expect: #{expected}"
+      puts "Registered: #{registered}"
+      puts "Same: #{expected == registered}"
+    end
+
+    def registered_multi_tenant_model
+      @registered_multi_tenant_model ||= []
+    end
+
+    def register_multi_tenant_model(klass)
+      registered_multi_tenant_model << klass
     end
 
     def extract_tenant_config

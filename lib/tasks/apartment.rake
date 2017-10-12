@@ -4,6 +4,10 @@ apartment_namespace = namespace :apartment do
 
   desc "Create all tenants"
   task create: 'db:migrate' do
+    if Apartment.use_citus
+      puts "Using Citus, no processing for other tenant"
+      next
+    end
     tenants.each do |tenant|
       begin
         puts("Creating #{tenant} tenant")
@@ -16,6 +20,10 @@ apartment_namespace = namespace :apartment do
 
   desc "Migrate all tenants"
   task :migrate do
+    if Apartment.use_citus
+      puts "Using Citus, no processing for other tenant"
+      next
+    end
     warn_if_tenants_empty
     iterate_tenants do |tenant|
       begin
@@ -29,8 +37,11 @@ apartment_namespace = namespace :apartment do
 
   desc "Seed all tenants"
   task :seed do
+    if Apartment.use_citus
+      puts "Using Citus, no processing for other tenant"
+      next
+    end
     warn_if_tenants_empty
-
     iterate_tenants do |tenant|
       begin
         puts("Seeding #{tenant} tenant")
@@ -45,6 +56,10 @@ apartment_namespace = namespace :apartment do
 
   desc "Rolls the migration back to the previous version (specify steps w/ STEP=n) across all tenants."
   task :rollback do
+    if Apartment.use_citus
+      puts "Using Citus, no processing for other tenant"
+      next
+    end
     warn_if_tenants_empty
 
     step = ENV['STEP'] ? ENV['STEP'].to_i : 1
@@ -62,6 +77,10 @@ apartment_namespace = namespace :apartment do
   namespace :migrate do
     desc 'Runs the "up" for a given migration VERSION across all tenants.'
     task :up do
+      if Apartment.use_citus
+        puts "Using Citus, no processing for other tenant"
+        next
+      end
       warn_if_tenants_empty
 
       version = ENV['VERSION'] ? ENV['VERSION'].to_i : nil
@@ -79,6 +98,10 @@ apartment_namespace = namespace :apartment do
 
     desc 'Runs the "down" for a given migration VERSION across all tenants.'
     task :down do
+      if Apartment.use_citus
+        puts "Using Citus, no processing for other tenant"
+        next
+      end
       warn_if_tenants_empty
 
       version = ENV['VERSION'] ? ENV['VERSION'].to_i : nil

@@ -7,11 +7,57 @@ module Apartment
       adapter = Adapters::PostgresqlAdapter
       adapter = Adapters::PostgresqlSchemaAdapter if Apartment.use_schemas
       adapter = Adapters::PostgresqlSchemaFromSqlAdapter if Apartment.use_sql && Apartment.use_schemas
+      adapter = Adapters::PostgresqlCitusAdapter if Apartment.use_citus
       adapter.new(config)
     end
   end
 
   module Adapters
+
+    class PostgresqlCitusAdapter< AbstractAdapter
+
+      def initialize(config)
+        super
+      end
+
+      def current
+        Apartment.compute_tenant_name_method.call(MultiTenant.current_tenant)
+      end
+
+      def switch!(tenant = nil)
+        Rails.logger.debug "[Apartment/Citus] Switch to #{tenant}"
+        run_callbacks :switch do
+          MultiTenant.current_tenant = Apartment.compute_tenant_id_method.call(tenant)
+        end
+      end
+
+      def drop(tenant)
+        switch(tenant) do
+          Apartment.multi_tenant_model_classes.each do |class_name|
+            class_name.delete_all
+          end
+        end
+      rescue *rescuable_exceptions => exception
+        raise_drop_tenant_error!(tenant, exception)
+      end
+
+      protected
+
+      def create_tenant(tenant)
+        # Do nothing
+      end
+
+      def import_database_schema
+        # Do nothing, schema is shared
+      end
+
+      private
+
+      def rescue_from
+        PGError
+      end
+    end
+    
     # Default adapter when not using Postgresql Schemas
     class PostgresqlAdapter < AbstractAdapter
 
