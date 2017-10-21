@@ -5,7 +5,7 @@ apartment_namespace = namespace :apartment do
   desc "Create all tenants"
   task create: 'db:migrate' do
     if Apartment.use_single_schema
-      puts "Using Citus, no processing for other tenant"
+      puts "Using single schema, no processing for other tenant"
       next
     end
     tenants.each do |tenant|
@@ -21,7 +21,7 @@ apartment_namespace = namespace :apartment do
   desc "Migrate all tenants"
   task :migrate do
     if Apartment.use_single_schema
-      puts "Using Citus, no processing for other tenant"
+      puts "Using single schema, no processing for other tenant"
       next
     end
     warn_if_tenants_empty
@@ -38,7 +38,7 @@ apartment_namespace = namespace :apartment do
   desc "Seed all tenants"
   task :seed do
     if Apartment.use_single_schema
-      puts "Using Citus, no processing for other tenant"
+      puts "Using single schema, no processing for other tenant"
       next
     end
     warn_if_tenants_empty
@@ -57,7 +57,7 @@ apartment_namespace = namespace :apartment do
   desc "Rolls the migration back to the previous version (specify steps w/ STEP=n) across all tenants."
   task :rollback do
     if Apartment.use_single_schema
-      puts "Using Citus, no processing for other tenant"
+      puts "Using single schema, no processing for other tenant"
       next
     end
     warn_if_tenants_empty
@@ -78,7 +78,7 @@ apartment_namespace = namespace :apartment do
     desc 'Runs the "up" for a given migration VERSION across all tenants.'
     task :up do
       if Apartment.use_single_schema
-        puts "Using Citus, no processing for other tenant"
+        puts "Using single schema, no processing for other tenant"
         next
       end
       warn_if_tenants_empty
@@ -99,7 +99,7 @@ apartment_namespace = namespace :apartment do
     desc 'Runs the "down" for a given migration VERSION across all tenants.'
     task :down do
       if Apartment.use_single_schema
-        puts "Using Citus, no processing for other tenant"
+        puts "Using single schema, no processing for other tenant"
         next
       end
       warn_if_tenants_empty

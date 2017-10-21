@@ -25,7 +25,7 @@ module Apartment
       end
 
       def switch!(tenant = nil)
-        Rails.logger.debug "[Apartment/Citus] Switch to #{tenant}"
+        Rails.logger.debug "[Apartment/SingleSchema] Switch to #{tenant}"
         run_callbacks :switch do
           MultiTenant.current_tenant = Apartment.compute_tenant_id_method.call(tenant)
         end

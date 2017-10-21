@@ -1,5 +1,5 @@
 module Apartment
-  module CitusMigrationExtensions
+  module SingleSchemaMigrationExtensions
     # TODO: should be automatic?
     def create_distributed_tables
       creation_info = {}
@@ -23,7 +23,7 @@ module Apartment
 end
 
 if defined?(ActiveRecord::Migration)
-  ActiveRecord::Migration.send(:include, Apartment::CitusMigrationExtensions)
+  ActiveRecord::Migration.send(:include, Apartment::SingleSchemaMigrationExtensions)
 end
 
 module ActiveRecord
@@ -46,7 +46,7 @@ module ActiveRecord
             # check whether this table need to change primary key
             if klass != Apartment.partition_model.constantize            
               # Not the partition model, need to change key
-              Rails.logger.info "[Apartment/Citus] Changing primary key for #{table_name}"
+              Rails.logger.info "[Apartment/SingleSchema] Changing primary key for #{table_name}"
               execute "ALTER TABLE #{table_name} DROP CONSTRAINT #{table_name}_pkey"
               execute "ALTER TABLE #{table_name} ADD PRIMARY KEY(id, \"#{Apartment.single_schema_partition_field}\")"
             end
@@ -60,7 +60,7 @@ module ActiveRecord
         ret = shopmatic_orig_add_foreign_key(from_table, to_table, options)
         if Apartment.multi_tenant_table_names.include?(from_table) &&
           Apartment.multi_tenant_table_names.include?(to_table)
-          Rails.logger.info "[Apartment/Citus] Recording foreign key dependency: #{from_table} => #{to_table}"
+          Rails.logger.info "[Apartment/SingleSchema] Recording foreign key dependency: #{from_table} => #{to_table}"
           Apartment.record_foreign_key_dependency(from_table, to_table)
         end
         ret
@@ -81,7 +81,7 @@ module ActiveRecord
           if options[:unique] && klass = Apartment.multi_tenant_table_name_to_class(table_name)
             column_name = [column_name] unless column_name.is_a?(Array)
             column_name << klass.partition_field
-            Rails.logger.info "[Apartment/Citus] multi-tenant unique index for #{table_name} changed to #{column_name}"
+            Rails.logger.info "[Apartment/SingleSchema] multi-tenant unique index for #{table_name} changed to #{column_name}"
           end
           shopmatic_orig_add_index(table_name, column_name, options, &block)
         end
@@ -102,7 +102,7 @@ module ActiveRecord
             from_table_class = Apartment.multi_tenant_table_name_to_class(o.from_table)
             to_table_class = Apartment.multi_tenant_table_name_to_class(o.to_table)
             if from_table_class && to_table_class
-              Rails.logger.info "[Apartment/Citus] create composite foreign key for #{o.from_table}/#{o.to_table} with paritition field #{from_table_class.partition_field}/#{to_table_class.partition_field}"
+              Rails.logger.info "[Apartment/SingleSchema] create composite foreign key for #{o.from_table}/#{o.to_table} with paritition field #{from_table_class.partition_field}/#{to_table_class.partition_field}"
               sql = <<-SQL.strip_heredoc
                 ADD CONSTRAINT #{quote_column_name(o.name)}
                 FOREIGN KEY (#{quote_column_name(o.column)},#{quote_column_name(from_table_class.partition_field)})
@@ -113,7 +113,7 @@ module ActiveRecord
               sql
             else
               # Non multi-tenant table
-              Rails.logger.info "[Apartment/Citus] create original foreign key for #{o.from_table}/#{o.to_table}"
+              Rails.logger.info "[Apartment/SingleSchema] create original foreign key for #{o.from_table}/#{o.to_table}"
               shopmatic_orig_visit_AddForeignKey(o)
             end
           else
