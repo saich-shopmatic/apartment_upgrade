@@ -1,54 +1,3 @@
-module ActiveRecord
-  module ConnectionAdapters # :nodoc:
-    module SchemaStatements
-      alias :shopmatic_orig_create_table :create_table
-      def create_table(table_name, options = {}, &block)
-        # check single-schema-multi-tenant
-        if Apartment.use_single_schema
-          # find the corresponding class_name
-          need_change_primary_key_klass = nil
-          Apartment.multi_tenant_model_classes.each do |testing_klass|
-            if testing_klass.table_name == table_name
-              need_change_primary_key_klass = testing_klass
-              break
-            end
-          end
-
-          # add tenant_id as primary key if needed
-          if need_change_primary_key_klass
-            # only changes for non-partition model
-            if need_change_primary_key_klass != Apartment.partition_model.constantize
-              given_pkey = options.fetch(:primary_key, Apartment::SINGLE_SCHEMA_DEFAULT_ID_FIELD)
-              ret = shopmatic_orig_create_table(table_name, options, &block)
-              # check if primary key exists, remove it if exists
-              current_pkey = ActiveRecord::Base.connection.schema_cache.primary_keys(table_name)
-              if current_pkey
-                Rails.logger.info "[Apartment/SingleSchema] Changing primary key for #{table_name}"
-                execute "ALTER TABLE #{table_name} DROP CONSTRAINT #{table_name}_pkey"
-              end
-              # left part of pkey may not exist due to BUG
-              # failback to given_pkey and Apartment::SINGLE_SCHEMA_DEFAULT_ID_FIELD
-              added_pkey_left = current_pkey || given_pkey
-              # create special pkeys
-              execute "ALTER TABLE #{table_name} ADD PRIMARY KEY(#{added_pkey_left}, \"#{Apartment.single_schema_partition_field}\")"
-              return ret
-            else
-              # this is partition model, no need to change
-              return shopmatic_orig_create_table(table_name, options, &block)
-            end
-          else
-            # klass not found, no need to change
-            return shopmatic_orig_create_table(table_name, options, &block)
-          end
-        else
-          # original
-          return shopmatic_orig_create_table(table_name, options, &block)
-        end
-      end
-    end
-  end
-end
-
 require 'active_record/connection_adapters/postgresql/schema_statements'
 
 module ActiveRecord
@@ -68,42 +17,6 @@ module ActiveRecord
             end
           end
           shopmatic_orig_add_index(table_name, column_name, options, &block)
-        end
-      end
-    end
-  end
-end
-
-module ActiveRecord
-  module ConnectionAdapters
-    class AbstractAdapter
-      class SchemaCreation # :nodoc:
-        # Overrite the original method in ActiveRecord 4.2.7.1
-        alias :shopmatic_orig_visit_AddForeignKey :visit_AddForeignKey
-        def visit_AddForeignKey(o)
-          if Apartment.use_single_schema
-            # check if both from_table and to_table is  multi_tenant
-            from_table_class = Apartment.multi_tenant_table_name_to_class(o.from_table)
-            to_table_class = Apartment.multi_tenant_table_name_to_class(o.to_table)
-            if from_table_class && to_table_class
-              Rails.logger.info "[Apartment/SingleSchema] create composite foreign key for #{o.from_table}/#{o.to_table} with paritition field #{from_table_class.partition_field}/#{to_table_class.partition_field}"
-              sql = <<-SQL.strip_heredoc
-                ADD CONSTRAINT #{quote_column_name(o.name)}
-                FOREIGN KEY (#{quote_column_name(o.column)},#{quote_column_name(from_table_class.partition_field)})
-                  REFERENCES #{quote_table_name(o.to_table)} (#{quote_column_name(o.primary_key)},#{quote_column_name(to_table_class.partition_field)})
-              SQL
-              sql << " #{action_sql('DELETE', o.on_delete)}" if o.on_delete
-              sql << " #{action_sql('UPDATE', o.on_update)}" if o.on_update
-              sql
-            else
-              # Non multi-tenant table
-              Rails.logger.info "[Apartment/SingleSchema] create original foreign key for #{o.from_table}/#{o.to_table}"
-              shopmatic_orig_visit_AddForeignKey(o)
-            end
-          else
-            # Not single_schema
-            shopmatic_orig_visit_AddForeignKey(o)
-          end
         end
       end
     end
