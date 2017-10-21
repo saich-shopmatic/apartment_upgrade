@@ -6,8 +6,6 @@ require 'apartment/tenant'
 require 'apartment/deprecation'
 require 'parallel'
 require 'apartment/model_extension'
-require 'apartment/migrations'
-require 'tsort'
 require 'apartment/activerecord_multi_tenant_patch'
 require 'apartment/active_record/core_extension'
 require 'apartment/active_record/reflection_extension'
@@ -16,26 +14,6 @@ require 'apartment/active_record/associations/association_scope_extension'
 
 
 module Apartment
-  class ForeignKeyDependency
-    include TSort
-  
-    def initialize
-      @requirements = Hash.new{|h,k| h[k] = []}
-    end
-  
-    def add_requirement(name, *requirement_dependencies)
-      @requirements[name] = requirement_dependencies
-    end
-  
-    def tsort_each_node(&block)
-      @requirements.each_key(&block)
-    end
-  
-    def tsort_each_child(name, &block)
-      @requirements[name].each(&block) if @requirements.has_key?(name)
-    end  
-  end
-
   class << self
 
     extend Forwardable
@@ -188,16 +166,6 @@ module Apartment
           tenant_id.to_s
         end
       end
-    end
-
-    def record_foreign_key_dependency(from_table, to_table)
-      @fk_dependency = ForeignKeyDependency.new if @fk_dependency.nil?
-      @fk_dependency.add_requirement(from_table, to_table)
-    end
-
-    def foreign_key_tsort
-      return [] if @fk_dependency.nil?
-      @fk_dependency.tsort
     end
 
     # Meaningful for non-partition model
