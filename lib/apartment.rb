@@ -1,3 +1,4 @@
+require 'apartment/constant'
 require 'apartment/railtie' if defined?(Rails)
 require 'active_support/core_ext/object/blank'
 require 'forwardable'

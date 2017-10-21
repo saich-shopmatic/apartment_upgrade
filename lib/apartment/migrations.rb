@@ -3,28 +3,47 @@ module ActiveRecord
     module SchemaStatements
       alias :shopmatic_orig_create_table :create_table
       def create_table(table_name, options = {}, &block)
-        ret = shopmatic_orig_create_table(table_name, options, &block)
-        # single_schema-specific
+        # check single-schema-multi-tenant
         if Apartment.use_single_schema
           # find the corresponding class_name
-          klass = nil
+          need_change_primary_key_klass = nil
           Apartment.multi_tenant_model_classes.each do |testing_klass|
             if testing_klass.table_name == table_name
-              klass = testing_klass
+              need_change_primary_key_klass = testing_klass
               break
             end
           end
-          if klass # This class is a multi-tenant class
-            # check whether this table need to change primary key
-            if klass != Apartment.partition_model.constantize            
-              # Not the partition model, need to change key
-              Rails.logger.info "[Apartment/SingleSchema] Changing primary key for #{table_name}"
-              execute "ALTER TABLE #{table_name} DROP CONSTRAINT #{table_name}_pkey"
-              execute "ALTER TABLE #{table_name} ADD PRIMARY KEY(id, \"#{Apartment.single_schema_partition_field}\")"
+
+          # add tenant_id as primary key if needed
+          if need_change_primary_key_klass
+            # only changes for non-partition model
+            if need_change_primary_key_klass != Apartment.partition_model.constantize
+              given_pkey = options.fetch(:primary_key, Apartment::SINGLE_SCHEMA_DEFAULT_ID_FIELD)
+              ret = shopmatic_orig_create_table(table_name, options, &block)
+              # check if primary key exists, remove it if exists
+              current_pkey = ActiveRecord::Base.connection.schema_cache.primary_keys(table_name)
+              if current_pkey
+                Rails.logger.info "[Apartment/SingleSchema] Changing primary key for #{table_name}"
+                execute "ALTER TABLE #{table_name} DROP CONSTRAINT #{table_name}_pkey"
+              end
+              # left part of pkey may not exist due to BUG
+              # failback to given_pkey and Apartment::SINGLE_SCHEMA_DEFAULT_ID_FIELD
+              added_pkey_left = current_pkey || given_pkey
+              # create special pkeys
+              execute "ALTER TABLE #{table_name} ADD PRIMARY KEY(#{added_pkey_left}, \"#{Apartment.single_schema_partition_field}\")"
+              return ret
+            else
+              # this is partition model, no need to change
+              return shopmatic_orig_create_table(table_name, options, &block)
             end
+          else
+            # klass not found, no need to change
+            return shopmatic_orig_create_table(table_name, options, &block)
           end
+        else
+          # original
+          return shopmatic_orig_create_table(table_name, options, &block)
         end
-        ret
       end
     end
   end

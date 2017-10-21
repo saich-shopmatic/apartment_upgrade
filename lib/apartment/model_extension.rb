@@ -11,13 +11,11 @@ module Apartment
   module SingleSchemaModelExtension
   
     extend ActiveSupport::Concern
-    
-    SINGLE_SCHEMA_DEFAULT_ID_FIELD = 'id'.freeze
 
     included do
       def fix_tenant_id
         if self.class.force_save_current_tenant
-          if self.class.partition_field != SINGLE_SCHEMA_DEFAULT_ID_FIELD
+          if self.class.partition_field != Apartment::SINGLE_SCHEMA_DEFAULT_ID_FIELD
             current_tenant_id = MultiTenant.current_tenant || 0
             model_tenant_id = self[self.class.partition_field]
             if model_tenant_id != current_tenant_id
@@ -65,7 +63,7 @@ module Apartment
             end
       
             def partition_field
-              @partition_field ||=  is_partition_model? ? SINGLE_SCHEMA_DEFAULT_ID_FIELD : Apartment.single_schema_partition_field
+              @partition_field ||=  is_partition_model? ? Apartment::SINGLE_SCHEMA_DEFAULT_ID_FIELD : Apartment.single_schema_partition_field
             end
           end
         end
