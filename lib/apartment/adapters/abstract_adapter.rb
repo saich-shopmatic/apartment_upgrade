@@ -155,6 +155,10 @@ module Apartment
         current
       end
 
+      def current_tenant_id
+        Apartment.compute_tenant_id_method.call(current)
+      end
+
     protected
 
       def process_excluded_model(excluded_model)
