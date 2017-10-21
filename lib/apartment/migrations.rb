@@ -7,7 +7,7 @@ module Apartment
         klass = class_name.constantize
         table_name = klass.table_name
         if klass != Apartment.partition_model.constantize     
-          partition_key = Apartment.citus_partition_field
+          partition_key = Apartment.single_schema_partition_field
         else
           partition_key = "id"
         end
@@ -32,8 +32,8 @@ module ActiveRecord
       alias :shopmatic_orig_create_table :create_table
       def create_table(table_name, options = {}, &block)
         ret = shopmatic_orig_create_table(table_name, options, &block)
-        # citus-specific
-        if Apartment.use_citus
+        # single_schema-specific
+        if Apartment.use_single_schema
           # find the corresponding class_name
           klass = nil
           Apartment.multi_tenant_model_classes.each do |testing_klass|
@@ -48,7 +48,7 @@ module ActiveRecord
               # Not the partition model, need to change key
               Rails.logger.info "[Apartment/Citus] Changing primary key for #{table_name}"
               execute "ALTER TABLE #{table_name} DROP CONSTRAINT #{table_name}_pkey"
-              execute "ALTER TABLE #{table_name} ADD PRIMARY KEY(id, \"#{Apartment.citus_partition_field}\")"
+              execute "ALTER TABLE #{table_name} ADD PRIMARY KEY(id, \"#{Apartment.single_schema_partition_field}\")"
             end
           end
         end
@@ -97,7 +97,7 @@ module ActiveRecord
         # Overrite the original method in ActiveRecord 4.2.7.1
         alias :shopmatic_orig_visit_AddForeignKey :visit_AddForeignKey
         def visit_AddForeignKey(o)
-          if Apartment.use_citus
+          if Apartment.use_single_schema
             # check if both from_table and to_table is  multi_tenant
             from_table_class = Apartment.multi_tenant_table_name_to_class(o.from_table)
             to_table_class = Apartment.multi_tenant_table_name_to_class(o.to_table)
@@ -117,7 +117,7 @@ module ActiveRecord
               shopmatic_orig_visit_AddForeignKey(o)
             end
           else
-            # No citus
+            # Not single_schema
             shopmatic_orig_visit_AddForeignKey(o)
           end
         end

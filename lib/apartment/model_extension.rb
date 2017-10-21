@@ -8,20 +8,20 @@ module Apartment
     end
   end
 
-  module CitusModelExtension
+  module SingleSchemaModelExtension
   
     extend ActiveSupport::Concern
     
-    CITUS_DEFAULT_ID_FIELD = 'id'.freeze
+    SINGLE_SCHEMA_DEFAULT_ID_FIELD = 'id'.freeze
 
     included do
       def fix_tenant_id
         if self.class.force_save_current_tenant
-          if self.class.partition_field != CITUS_DEFAULT_ID_FIELD
+          if self.class.partition_field != SINGLE_SCHEMA_DEFAULT_ID_FIELD
             current_tenant_id = MultiTenant.current_tenant || 0
             model_tenant_id = self[self.class.partition_field]
             if model_tenant_id != current_tenant_id
-              Rails.logger.info "[Apartment/Citus] Fix tenant id for #{self}: #{model_tenant_id}->#{current_tenant_id}"
+              Rails.logger.info "[Apartment/SingleSchema] Fix tenant id for #{self}: #{model_tenant_id}->#{current_tenant_id}"
               self[self.class.partition_field] = current_tenant_id
             end
           end
@@ -43,13 +43,10 @@ module Apartment
         false
       end
 
-      def use_citus_multi_tenant
-        if Apartment.use_citus
-          if !table_name
-            byebug
-          end
+      def use_single_schema_multi_tenant
+        if Apartment.use_single_schema
           include Apartment::ExcludeTenantIdFromJson
-          multi_tenant(Apartment.partition_model.underscore.to_sym, partition_key: Apartment.citus_partition_field)
+          multi_tenant(Apartment.partition_model.underscore.to_sym, partition_key: Apartment.single_schema_partition_field)
           before_save :fix_tenant_id
           Apartment.register_multi_tenant_model(self)
           # Define/overwrite class methods for multi-tenanted model
@@ -59,7 +56,7 @@ module Apartment
               true
             end
 
-            def scoped_by_citus_multi_tenant
+            def scoped_by_single_schema_multi_tenant
               true
             end
 
@@ -68,7 +65,7 @@ module Apartment
             end
       
             def partition_field
-              @partition_field ||=  is_partition_model? ? CITUS_DEFAULT_ID_FIELD : Apartment.citus_partition_field
+              @partition_field ||=  is_partition_model? ? SINGLE_SCHEMA_DEFAULT_ID_FIELD : Apartment.single_schema_partition_field
             end
           end
         end
@@ -79,5 +76,5 @@ module Apartment
 end
 
 if defined?(ActiveRecord::Base)
-  ActiveRecord::Base.include(Apartment::CitusModelExtension)
+  ActiveRecord::Base.include(Apartment::SingleSchemaModelExtension)
 end

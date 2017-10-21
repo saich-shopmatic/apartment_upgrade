@@ -3,7 +3,6 @@ module ActiveRecord
     class AssociationScope #:nodoc:
       def add_constraints(scope, owner, assoc_klass, refl, tracker)
         # Shopmatic: handle 'has_many': add owner multi tenant id 
-        binding.pry if $enable_debug
         if owner.class&.multi_tenant? && assoc_klass&.multi_tenant?
           scope = scope.where(tenant_id: owner.tenant_id)
         end

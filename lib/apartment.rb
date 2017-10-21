@@ -40,8 +40,8 @@ module Apartment
 
     extend Forwardable
 
-    ACCESSOR_METHODS  = [:use_schemas, :use_sql, :seed_after_create, :prepend_environment, :append_environment, :with_multi_server_setup, :use_parallel_tenant_task, :use_citus, :citus_default_tenant ]
-    WRITER_METHODS    = [:tenant_names, :database_schema_file, :excluded_models, :default_schema, :persistent_schemas, :connection_class, :tld_length, :db_migrate_tenants, :seed_data_file, :num_parallel_in_processes, :multi_tenant_models, :partition_model, :compute_tenant_id_method, :compute_tenant_name_method, :citus_partition_field]
+    ACCESSOR_METHODS  = [:use_schemas, :use_sql, :seed_after_create, :prepend_environment, :append_environment, :with_multi_server_setup, :use_parallel_tenant_task, :use_single_schema, :single_schema_default_tenant ]
+    WRITER_METHODS    = [:tenant_names, :database_schema_file, :excluded_models, :default_schema, :persistent_schemas, :connection_class, :tld_length, :db_migrate_tenants, :seed_data_file, :num_parallel_in_processes, :multi_tenant_models, :partition_model, :compute_tenant_id_method, :compute_tenant_name_method, :single_schema_partition_field]
 
     attr_accessor(*ACCESSOR_METHODS)
     attr_writer(*WRITER_METHODS)
@@ -201,8 +201,8 @@ module Apartment
     end
 
     # Meaningful for non-partition model
-    def citus_partition_field
-      @citus_partition_field ||= "#{self.partition_model.underscore}_id".to_sym
+    def single_schema_partition_field
+      @single_schema_partition_field ||= "#{self.partition_model.underscore}_id".to_sym
     end
 
     def sanity_check

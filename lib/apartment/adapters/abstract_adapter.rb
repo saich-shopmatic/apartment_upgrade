@@ -151,6 +151,10 @@ module Apartment
       end
       alias_method :seed, :seed_data
 
+      def tenant_key
+        current
+      end
+
     protected
 
       def process_excluded_model(excluded_model)

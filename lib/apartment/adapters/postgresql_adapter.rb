@@ -7,14 +7,14 @@ module Apartment
       adapter = Adapters::PostgresqlAdapter
       adapter = Adapters::PostgresqlSchemaAdapter if Apartment.use_schemas
       adapter = Adapters::PostgresqlSchemaFromSqlAdapter if Apartment.use_sql && Apartment.use_schemas
-      adapter = Adapters::PostgresqlCitusAdapter if Apartment.use_citus
+      adapter = Adapters::PostgresqlSingleSchemaAdapter if Apartment.use_single_schema
       adapter.new(config)
     end
   end
 
   module Adapters
 
-    class PostgresqlCitusAdapter< AbstractAdapter
+    class PostgresqlSingleSchemaAdapter< AbstractAdapter
 
       def initialize(config)
         super
@@ -41,6 +41,14 @@ module Apartment
         raise_drop_tenant_error!(tenant, exception)
       end
 
+      def tenant_key
+        if MultiTenant.multi_tenant_disabled?
+          "MULTI_TENANT_DISABLED"
+        else
+          current
+        end
+      end
+
       protected
 
       def create_tenant(tenant)
@@ -49,7 +57,13 @@ module Apartment
 
       def import_database_schema
         # Do nothing, schema is shared
+      end      
+      
+      def process_excluded_model(excluded_model)
+        # Do nothing
       end
+
+
 
       private
 
