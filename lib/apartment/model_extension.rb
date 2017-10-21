@@ -1,6 +1,13 @@
 require 'request_store'
 
 module Apartment
+
+  module ExcludeTenantIdFromJson
+    def as_json(options = {})
+      super(options.merge({ except: [:tenant_id] }))
+    end
+  end
+
   module CitusModelExtension
   
     extend ActiveSupport::Concern
@@ -32,16 +39,25 @@ module Apartment
         RequestStore.store[[self, :force_save_current_tenant]] = val
       end
 
+      def multi_tenant?
+        false
+      end
+
       def use_citus_multi_tenant
         if Apartment.use_citus
           if !table_name
             byebug
           end
+          include Apartment::ExcludeTenantIdFromJson
           multi_tenant(Apartment.partition_model.underscore.to_sym, partition_key: Apartment.citus_partition_field)
           before_save :fix_tenant_id
           Apartment.register_multi_tenant_model(self)
           # Define/overwrite class methods for multi-tenanted model
           class << self
+
+            def multi_tenant?
+              true
+            end
 
             def scoped_by_citus_multi_tenant
               true

@@ -9,6 +9,11 @@ require 'apartment/model_extension'
 require 'apartment/migrations'
 require 'tsort'
 require 'apartment/activerecord_multi_tenant_patch'
+require 'apartment/active_record/core_extension'
+require 'apartment/active_record/reflection_extension'
+require 'apartment/active_record/persistence_extension'
+require 'apartment/active_record/associations/association_scope_extension'
+
 
 module Apartment
   class ForeignKeyDependency
@@ -227,6 +232,10 @@ module Apartment
       values.with_indifferent_access
     rescue ActiveRecord::StatementInvalid
       {}
+    end
+
+    def without_multi_tenant(*args, &block)
+      MultiTenant.without_multi_tenant(*args, &block)
     end
   end
 
