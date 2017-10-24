@@ -7,6 +7,7 @@ require 'apartment/tenant'
 require 'apartment/deprecation'
 require 'parallel'
 require 'apartment/model_extension'
+require 'apartment/active_job_extension'
 require 'apartment/migrations'
 require 'apartment/activerecord_multi_tenant_patch'
 require 'apartment/active_record/core_extension'
@@ -173,14 +174,6 @@ module Apartment
     # Meaningful for non-partition model
     def single_schema_partition_field
       @single_schema_partition_field ||= "#{self.partition_model.underscore}_id".to_sym
-    end
-
-    def sanity_check
-      registered = registered_multi_tenant_model.map(&:to_s).sort
-      expected = multi_tenant_models.sort
-      puts "Expect: #{expected}"
-      puts "Registered: #{registered}"
-      puts "Same: #{expected == registered}"
     end
 
     def registered_multi_tenant_model
