@@ -8,10 +8,9 @@ module Apartment
     included do
       around_perform do |job, block|
         if Apartment.use_single_schema
-          RequestStore.begin!
+          RequestStore.push_state!
           block.call
-          RequestStore.end!
-          RequestStore.clear! 
+          RequestStore.pop_state!
         else
           block.call
         end

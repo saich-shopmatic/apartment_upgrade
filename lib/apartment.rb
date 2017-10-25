@@ -10,10 +10,12 @@ require 'apartment/model_extension'
 require 'apartment/active_job_extension'
 require 'apartment/migrations'
 require 'apartment/activerecord_multi_tenant_patch'
+require 'apartment/request_store_extension'
 require 'apartment/active_record/core_extension'
 require 'apartment/active_record/reflection_extension'
 require 'apartment/active_record/persistence_extension'
 require 'apartment/active_record/associations/association_scope_extension'
+
 
 
 module Apartment
