@@ -13,7 +13,7 @@ module Apartment
     extend Forwardable
 
     ACCESSOR_METHODS  = [:use_schemas, :use_sql, :seed_after_create, :prepend_environment, :append_environment, :with_multi_server_setup, :use_parallel_tenant_task ]
-    WRITER_METHODS    = [:tenant_names, :database_schema_file, :excluded_models, :default_schema, :persistent_schemas, :connection_class, :tld_length, :db_migrate_tenants, :seed_data_file, :num_parallel_in_processes]
+    WRITER_METHODS    = [:tenant_names, :database_schema_file, :excluded_models, :default_schema, :persistent_schemas, :connection_class, :tld_length, :db_migrate_tenants, :seed_data_file, :num_parallel_in_processes, :schema_exist_check_method]
 
     attr_accessor(*ACCESSOR_METHODS)
     attr_writer(*WRITER_METHODS)
@@ -109,6 +109,12 @@ module Apartment
       return @num_parallel_in_processes if defined?(@num_parallel_in_processes)
 
       @num_parallel_in_processes = [1,ActiveRecord::Base.connection_pool.size - 2].max
+    end
+
+    def schema_exist_check_method
+      @schema_exist_check_method || Proc.new do |tenant|
+        Apartment.connection.schema_exists? tenant
+      end
     end
 
     def extract_tenant_config
