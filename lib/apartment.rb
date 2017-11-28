@@ -24,7 +24,7 @@ module Apartment
     extend Forwardable
 
     ACCESSOR_METHODS  = [:use_schemas, :use_sql, :seed_after_create, :prepend_environment, :append_environment, :with_multi_server_setup, :use_parallel_tenant_task, :use_single_schema, :single_schema_default_tenant ]
-    WRITER_METHODS    = [:tenant_names, :database_schema_file, :excluded_models, :default_schema, :persistent_schemas, :connection_class, :tld_length, :db_migrate_tenants, :seed_data_file, :num_parallel_in_processes, :multi_tenant_models, :partition_model, :compute_tenant_id_method, :compute_tenant_name_method, :single_schema_partition_field]
+    WRITER_METHODS    = [:tenant_names, :database_schema_file, :excluded_models, :default_schema, :persistent_schemas, :connection_class, :tld_length, :db_migrate_tenants, :seed_data_file, :num_parallel_in_processes, :multi_tenant_models, :partition_model, :compute_tenant_id_method, :compute_tenant_name_method, :single_schema_partition_field, :schema_exist_check_method]
 
     attr_accessor(*ACCESSOR_METHODS)
     attr_writer(*WRITER_METHODS)
@@ -185,6 +185,12 @@ module Apartment
     def register_multi_tenant_model(klass)
       registered_multi_tenant_model << klass
     end
+
+    def schema_exist_check_method 
+      @schema_exist_check_method || Proc.new do |tenant| 
+        Apartment.connection.schema_exists? tenant 
+      end 
+    end 
 
     def extract_tenant_config
       return {} unless @tenant_names

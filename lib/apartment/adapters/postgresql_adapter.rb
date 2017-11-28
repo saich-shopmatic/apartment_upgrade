@@ -123,7 +123,7 @@ module Apartment
       #
       def connect_to_new(tenant = nil)
         return reset if tenant.nil?
-        raise ActiveRecord::StatementInvalid.new("Could not find schema #{tenant}") unless Apartment.connection.schema_exists? tenant
+        raise ActiveRecord::StatementInvalid.new("Could not find schema #{tenant}") unless Apartment.schema_exist_check_method.call(tenant)
 
         @current = tenant.to_s
         Apartment.connection.schema_search_path = full_search_path
