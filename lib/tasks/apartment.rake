@@ -128,7 +128,10 @@ apartment_namespace = namespace :apartment do
     if Apartment.use_parallel_tenant_task
       puts "Parallel processing with #{Apartment.num_parallel_in_processes} processes"
       Parallel.each(tenants, in_processes: Apartment.num_parallel_in_processes ) do |tenant_name|
-        yield tenant_name
+        Apartment.before_migrating_tenant_method&.call(tenant_name)
+        ret = yield tenant_name
+        Apartment.after_migrating_tenant_method&.call(tenant_name)
+        ret
       end
     else
       tenants.each do |tenant_name|
