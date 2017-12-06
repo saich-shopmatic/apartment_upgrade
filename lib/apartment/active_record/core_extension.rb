@@ -2,6 +2,10 @@ if defined?(ActiveRecord::Core)
   module ActiveRecord
     module Core
       module ClassMethods
+        def current_tenant_key
+          Apartment::Tenant.tenant_key
+        end
+
         def find(*ids) # :nodoc:
           # We don't have cache keys for this stuff yet
           return super unless ids.length == 1
@@ -27,7 +31,7 @@ if defined?(ActiveRecord::Core)
 
           # Shopmatic: monkey patch here
           if multi_tenant?
-            tenant_key = Apartment::Tenant.tenant_key
+            tenant_key = current_tenant_key
             if key.is_a?(Array)
               cache_key = key.clone
               cache_key << tenant_key
@@ -69,7 +73,7 @@ if defined?(ActiveRecord::Core)
           # Shopmatic: monkey patch here
           if multi_tenant?
             cache_key = key.clone
-            cache_key << Apartment::Tenant.tenant_key
+            cache_key << current_tenant_key
           else
             cache_key = key
           end
