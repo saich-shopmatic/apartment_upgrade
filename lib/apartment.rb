@@ -189,21 +189,21 @@ module Apartment
       registered_multi_tenant_model << klass
     end
 
-    def schema_exist_check_method 
-      @schema_exist_check_method || Proc.new do |tenant| 
-        Apartment.connection.schema_exists? tenant 
-      end 
-    end 
+    def schema_exist_check_method
+      @schema_exist_check_method || Proc.new do |tenant|
+        Apartment.connection.schema_exists? tenant
+      end
+    end
 
-    def before_migrating_tenant_method 
-      @before_migrating_tenant_method || Proc.new do |tenant_nane| 
-      end 
-    end 
- 
-    def after_migrating_tenant_method 
-      @after_migrating_tenant_method || Proc.new do |tenant_nane| 
-      end 
-    end 
+    def before_migrating_tenant_method
+      @before_migrating_tenant_method || Proc.new do |tenant_nane|
+      end
+    end
+
+    def after_migrating_tenant_method
+      @after_migrating_tenant_method || Proc.new do |tenant_nane|
+      end
+    end
 
     def extract_tenant_config
       return {} unless @tenant_names
@@ -220,6 +220,14 @@ module Apartment
 
     def without_multi_tenant(*args, &block)
       MultiTenant.without_multi_tenant(*args, &block)
+    end
+
+    def raise_exception_when_attribute_changed(*args, &block)
+      MultiTenant.send(:raise_exception_when_attribute_changed, *args, &block)
+    end
+
+    def raise_exception_when_attribute_changed=(*args)
+      MultiTenant.send(:raise_exception_when_attribute_changed=, *args)
     end
   end
 
