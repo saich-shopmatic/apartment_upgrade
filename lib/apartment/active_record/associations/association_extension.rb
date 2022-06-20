@@ -23,11 +23,11 @@ module ActiveRecord
         if tenant_id
           ret = nil
           Apartment::Tenant.switch(tenant_id) do
-            ret = AssociationRelation.create(klass, klass.arel_table, self).merge!(klass.all)
+            ret = AssociationRelation.create(klass, self).merge!(klass.all)
           end
           ret
         else
-          AssociationRelation.create(klass, klass.arel_table, self).merge!(klass.all)
+          AssociationRelation.create(klass, self).merge!(klass.all)
         end
       end
     end
