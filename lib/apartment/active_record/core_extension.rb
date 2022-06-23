@@ -82,6 +82,7 @@ if defined?(ActiveRecord::Core)
           end
   
           klass = self
+          keys = hash.keys
           s = cached_find_by_statement(keys) { |params|
             wheres = keys.each_with_object({}) { |param, o|
               o[param] = params.bind
