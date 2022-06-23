@@ -45,11 +45,6 @@ if defined?(ActiveRecord::Core)
           s = cached_find_by_statement(key) { |params|
             where(key => params.bind).limit(1)
           }
-          # s = find_by_statement_cache[cache_key] || find_by_statement_cache.synchronize {
-          #   find_by_statement_cache[cache_key] ||= StatementCache.create(connection) { |params|
-          #     where(key => params.bind).limit(1)
-          #   }
-          # }
           record = s.execute([id], connection).first
           unless record
             raise RecordNotFound, "Couldn't find #{name} with '#{primary_key}'=#{id}"
@@ -89,14 +84,6 @@ if defined?(ActiveRecord::Core)
             }
             where(wheres).limit(1)
           }
-          # s = find_by_statement_cache[cache_key] || find_by_statement_cache.synchronize {
-          #   find_by_statement_cache[cache_key] ||= StatementCache.create(connection) { |params|
-          #     wheres = key.each_with_object({}) { |param,o|
-          #       o[param] = params.bind
-          #     }
-          #     klass.where(wheres).limit(1)
-          #   }
-          # }
           begin
             s.execute(hash.values, connection).first
           rescue TypeError => e
