@@ -50,7 +50,7 @@ if defined?(ActiveRecord::Core)
           #     where(key => params.bind).limit(1)
           #   }
           # }
-          record = s.execute([id], self, connection).first
+          record = s.execute([id], connection).first
           unless record
             raise RecordNotFound, "Couldn't find #{name} with '#{primary_key}'=#{id}"
           end
@@ -97,7 +97,7 @@ if defined?(ActiveRecord::Core)
           #   }
           # }
           begin
-            s.execute(hash.values, self, connection).first
+            s.execute(hash.values, connection).first
           rescue TypeError => e
             raise ActiveRecord::StatementInvalid.new(e.message, e)
           rescue RangeError
