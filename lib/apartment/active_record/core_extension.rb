@@ -41,12 +41,15 @@ if defined?(ActiveRecord::Core)
           else
             cache_key = key
           end
-  
-          s = find_by_statement_cache[cache_key] || find_by_statement_cache.synchronize {
-            find_by_statement_cache[cache_key] ||= StatementCache.create(connection) { |params|
-              where(key => params.bind).limit(1)
-            }
+
+          s = cached_find_by_statement(key) { |params|
+            where(key => params.bind).limit(1)
           }
+          # s = find_by_statement_cache[cache_key] || find_by_statement_cache.synchronize {
+          #   find_by_statement_cache[cache_key] ||= StatementCache.create(connection) { |params|
+          #     where(key => params.bind).limit(1)
+          #   }
+          # }
           record = s.execute([id], self, connection).first
           unless record
             raise RecordNotFound, "Couldn't find #{name} with '#{primary_key}'=#{id}"
@@ -79,14 +82,20 @@ if defined?(ActiveRecord::Core)
           end
   
           klass = self
-          s = find_by_statement_cache[cache_key] || find_by_statement_cache.synchronize {
-            find_by_statement_cache[cache_key] ||= StatementCache.create(connection) { |params|
-              wheres = key.each_with_object({}) { |param,o|
-                o[param] = params.bind
-              }
-              klass.where(wheres).limit(1)
+          s = cached_find_by_statement(keys) { |params|
+            wheres = keys.each_with_object({}) { |param, o|
+              o[param] = params.bind
             }
+            where(wheres).limit(1)
           }
+          # s = find_by_statement_cache[cache_key] || find_by_statement_cache.synchronize {
+          #   find_by_statement_cache[cache_key] ||= StatementCache.create(connection) { |params|
+          #     wheres = key.each_with_object({}) { |param,o|
+          #       o[param] = params.bind
+          #     }
+          #     klass.where(wheres).limit(1)
+          #   }
+          # }
           begin
             s.execute(hash.values, self, connection).first
           rescue TypeError => e
