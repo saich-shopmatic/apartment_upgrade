@@ -15,7 +15,7 @@ if defined?(ActiveRecord::Reflection)
           end          
         end
 
-        def association_scope_cache(conn, owner)
+        def association_scope_cache(conn, owner, &block)
           key = conn.prepared_statements
           if polymorphic?
             key = [key, owner._read_attribute(@foreign_type)]
@@ -27,10 +27,9 @@ if defined?(ActiveRecord::Reflection)
           else
             key = [key, tenant_key]
           end
-          @association_scope_cache[key] ||= @scope_lock.synchronize {
-            @association_scope_cache[key] ||= yield
-          }
+          @association_scope_cache.compute_if_absent(key) { StatementCache.create(conn, &block) }
         end
+
       end
     end
   end
