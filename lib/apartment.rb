@@ -5,7 +5,7 @@ require 'forwardable'
 require 'active_record'
 require 'apartment/tenant'
 require 'apartment/deprecation'
-require 'parallel'
+require 'parallel' if defined?(Rails)
 require 'apartment/model_extension'
 require 'apartment/active_job_extension'
 require 'apartment/migrations'
